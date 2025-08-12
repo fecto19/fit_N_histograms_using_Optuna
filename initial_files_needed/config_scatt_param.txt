@@ -5,8 +5,8 @@ M2	938.272
 kMin	0
 kMax	90
 kBin	45
-par1	-30.0	-20.0
-par2	1.5	2.5
+par1	11	25
+par2	1	3
 pw	s
 pot 	DoubleGauss
 WakeUp  1

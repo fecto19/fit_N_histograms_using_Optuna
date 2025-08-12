@@ -105,11 +105,11 @@ vector<int> string_to_vector_int(const string& par_string){
     return parameters;
 }
 
-/*
+
 
 int model_phase_shifts(const double f, const double d, const int cpu, const int nbins_ps){
     printf("%s\n", "creating TFile...");
-    TFile *th_model_cpu_phase_shifts = new TFile(TString::Format("th_model_cpu%i_phase_shifts.root", cpu), "RECREATE");
+    TFile *th_model_cpu_phase_shifts = new TFile(TString::Format("th_model_cpu%i_phase_shifts_th_histo_1.root", cpu), "RECREATE");
     printf("%s\n", "TFile created");
     double k_min = 0.0;
     double k_max = 150.0;
@@ -133,10 +133,10 @@ int model_phase_shifts(const double f, const double d, const int cpu, const int 
     printf("%s\n", "TFile closed :)");
     return 0;
 }
-*/
 
 
 
+/*
 // another model for the phase shifts since it seems it ain't working with the above one...
 // this one and the one above get different parameters - must change config file
 int model_phase_shifts_gauss(int nbins_ps, double a_gauss, double b_gauss, double source_size, int cpu){
@@ -192,23 +192,24 @@ int model_phase_shifts_gauss(int nbins_ps, double a_gauss, double b_gauss, doubl
     printf("%s\n", "TFile closed :)");
     return 0;
 }
+*/
 
 
 int OPTUNA_TRY001(int argc, char *argv[]){
     printf("%s\n", "Start:");
     string parameters_str = argv[1];
     vector<double> parameters = string_to_vector_double(parameters_str);
-//    double f = parameters[0];
-    double a_gauss = parameters[0];
-//    double d = parameters[1];
-    double b_gauss = parameters[1];
+    double f = parameters[0];
+//    double a_gauss = parameters[0];
+    double d = parameters[1];
+//    double b_gauss = parameters[1];
     int cpu = stoi(argv[2]);
     string nbins_str = argv[3];
     vector<int> nbins = string_to_vector_int(nbins_str);
     int nbins_ps = nbins[0];
-    double source_size = 1.25; // must take later from config file
-//    model_phase_shifts(f, d, cpu, nbins_ps);
-    model_phase_shifts_gauss(nbins_ps, a_gauss, b_gauss, source_size, cpu);
+//    double source_size = 1.25; // must take later from config file
+    model_phase_shifts(f, d, cpu, nbins_ps);
+//    model_phase_shifts_gauss(nbins_ps, a_gauss, b_gauss, source_size, cpu);
     printf("%s\n", "End.");
     return 0;
 }

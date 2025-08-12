@@ -17,13 +17,6 @@ import pandas as pd
 current_dir = os.path.dirname(__file__)
 
 # path to theoretical model script
-#model_path = "/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/try_stuff/optuna_try/model_try001.C"
-model_path = "/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/try_stuff/optuna_try/model_easy_try001.C"
-"""
-# create study globally
-global_directions = ["minimize"]
-global_sampler = optuna.samplers.TPESampler(seed=42)
-global_study = optuna.create_study(directions=global_directions, sampler=global_sampler) """
 
 FmToNu = 5.067731237e-3
 
@@ -41,69 +34,6 @@ def target_function(parameter_ranges, trial):
     return 0
 
 # update theoretical histos, calculate new chi^2, update study
-def worker(cpu, exp_data, par_ranges, path, nbins, trial, chi_sqrs): # used to have study_name and and data_url as input also 
-#    study = optuna.load_study(study_name=study_name, storage=storage_url)
-    target_function(par_ranges, trial)
-    # extract the parameters
-    current_parameters = list(trial.params.values())
-    # give them to model script
-    path_temp_files = path
-    executable_path = "/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/CATS/Cproject/bin/LocalFemto"
-#    print(current_parameters)
-#    print(cpu)
-#    print(nbins)
-    current_parameters_str = f"{current_parameters}"
-    cpu_str = f"{cpu}"
-    nbins_str = f"{nbins}"
-    command = [executable_path, current_parameters_str, cpu_str, nbins_str]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-#    print(f"started process {cpu}...\n")
-#    print("communicating...\n")
-    stdout, stderr = process.communicate()
-    
-#    print(stdout)
-#    print(stderr)
-#    print(process.returncode)
-#    print("done communicating :D\n")
-    
-    # model script returns temporary .root files
-    paths = []
-    for file in os.listdir(path_temp_files):
-#        print("file:", file)
-        if file.startswith(f"th_model_cpu{cpu}") and file.endswith(".root"):
-            path_j = f"{path}/{file}"
-            paths.append(path_j)
-#    print("paths:", paths)
-    th_histos_names = []
-    for i in range(len(list(exp_data.values()))):
-        name_i = f"th_histo_{i+1}"
-        th_histos_names.append(name_i)
-#    print(th_histos_names)
-    ordered_paths = []
-    for name in th_histos_names:
-        for i in range(len(paths)):
-            if name in paths[i]:
-                ordered_paths.append(paths[i])
-    primary_th_dict = dict(zip(th_histos_names, ordered_paths))
-#    print("primary dictionary:", primary_th_dict)
-    th_histos_dict = get_histos_from_dict(primary_th_dict)
-    histos_t = list(th_histos_dict.values())
-#    print("histos_t:", histos_t)
-    histos_exp = list(exp_data.values())
-#    print("histos_exp:", histos_exp)
-    # take root files and calculate new chi^2
-#    chi_sqrs = []
-    for i in range(len(histos_exp)):
-        chi_sqr_i = find_chi_sqr(histos_t[i], histos_exp[i])
-        chi_sqr_i = chi_sqr_i / nbins[i]
-        chi_sqrs.append(chi_sqr_i)
-    trial.set_user_attr("cpu", cpu)
-#    global_study.tell(trial, chi_sqrs)
-    print(f"finished process cpu {cpu}")
-    return 0
-
-
-# new worker after making asking in parent process
 def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
     # give parameters to model script
     path_temp_files = path
@@ -196,38 +126,6 @@ def get_histos(paths, names_list):
         histos[names_list[i]] = histo_i
     return histos
 
-'''
-def get_histos_from_dict(histos_dict, all_histos_created_bool):
-    histos = {}
-    if False not in all_histos_created_bool:
-        for name, path in histos_dict.items():
-            file_i = ROOT.TFile.Open(path, "READ")
-            ROOT.gROOT.cd()
-            histo = file_i.Get(name)
-            if not histo:
-                print(f"[ERROR] Could not get histogram '{name}' from file '{path}'")
-                print(f"  - File valid? {file_i.IsZombie()}")
-                continue
-            histo_i = file_i.Get(name).Clone()
-            file_i.Close()
-            histos[name] = histo_i
-    elif False in all_histos_created_bool:
-        for name, path in histos_dict.items():
-            if path.endswith("_no_such_file.root") == False:
-                file_i = ROOT.TFile.Open(path, "READ")
-                ROOT.gROOT.cd()
-                histo = file_i.Get(name)
-                if not histo:
-                    print(f"[ERROR] Could not get histogram '{name}' from file '{path}'")
-                    print(f"  - File valid? {file_i.IsZombie()}")
-                    continue
-                histo_i = file_i.Get(name).Clone()
-                file_i.Close()
-                histos[name] = histo_i
-            else:
-                histos[name] = "no_histo_created"
-    return histos
-'''
 
 def get_histos_from_dict(histos_dict, all_histos_created_bool):
     histos = {}
@@ -406,22 +304,13 @@ def main(path_to_config_file):
     for i in range(len(th_histo_index)):
         directions_list_002.append("minimize")
 
-#    study_name = "Fin01"
-    dir_storage_path = os.path.dirname(path_to_config_file)
-#    storage_path = f"{dir_storage_path}/optuna_optimizer_data.db"
-#    if os.path.exists(storage_path):
-#        os.remove(storage_path)
-#    data_url = "sqlite:///optuna_optimizer_data.db"
-#    data_url = f"sqlite:///{storage_path}"
-#    sampler = optuna.samplers.NSGAIISampler()
+    dir_storage_path = current_dir
     sampler = optuna.samplers.TPESampler(seed=1)
-#    sampler = optuna.samplers.RandomSampler()
-#    study = optuna.create_study(study_name = study_name, storage=data_url, directions=directions_list, sampler=sampler)
+#    sampler = optuna.samplers.RandomSampler(seed=6)
+#    sampler = optuna.samplers.NSGAIISampler(seed=9)
+
     study_002 = optuna.create_study(directions=directions_list_002, sampler=sampler)
     number_of_chi2s = len(exp_histo_names_list)
-#    if number_of_chi2s > 1:
-#        for i in range (0, number_of_chi2s - 1):
-#            global_directions.append("minimize")
 
     current_time = time.time()
     dT = int((current_time - start_time)/60.0)

@@ -1,0 +1,14 @@
+histo_th_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/th_histo_1_Double_Gauss_to_AV18_histo_1.25.root	double_gauss_phase_shifts_h 1
+histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/AV18_histo_1.25.root	phase_shifts_AV18 1
+M1	938.272
+M2	938.272
+kMin	0
+kMax	90
+kBin	45
+par1	-30.0	-20.0
+par2	1.5	2.5
+pw	s
+pot 	DoubleGauss
+WakeUp  1
+TIMEOUT 10
+CPU 4

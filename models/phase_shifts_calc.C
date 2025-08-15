@@ -106,7 +106,7 @@ vector<int> string_to_vector_int(const string& par_string){
 }
 
 
-
+/*
 int model_phase_shifts(const double f, const double d, const int cpu, const int nbins_ps){
     printf("%s\n", "creating TFile...");
     TFile *th_model_cpu_phase_shifts = new TFile(TString::Format("th_model_cpu%i_phase_shifts_th_histo_1.root", cpu), "RECREATE");
@@ -133,7 +133,7 @@ int model_phase_shifts(const double f, const double d, const int cpu, const int 
     printf("%s\n", "TFile closed :)");
     return 0;
 }
-
+*/
 
 
 /*
@@ -194,7 +194,132 @@ int model_phase_shifts_gauss(int nbins_ps, double a_gauss, double b_gauss, doubl
 }
 */
 
-int fit_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source_size, int cpu){
+int fit_f_d_from_a_b(int nbins_ps, int nbins_fd, double a_gauss, double b_gauss, double source_size, int cpu){
+    nbins_fd = 10;
+    double m1 = 938.272;
+    double m2 = 938.272;
+    double m_red = m1*m2/(m1+m2);
+    double k_min = 0;
+    double k_max = 80;
+    
+    CATS scatt_cat;
+    scatt_cat.SetMomBins(nbins_fd, k_min, k_max);
+    scatt_cat.SetThetaDependentSource(false);
+
+    CATSparameters source_p(CATSparameters::tSource, 1, true);
+    scatt_cat.SetAnaSource(GaussSource, source_p);
+    scatt_cat.SetAnaSource(0, source_size);
+    scatt_cat.SetAutoNormSource(true);
+    scatt_cat.SetUseAnalyticSource(true);
+    scatt_cat.SetMomentumDependentSource(false);
+    scatt_cat.SetExcludeFailedBins(false);
+    scatt_cat.SetQ1Q2(0);
+    scatt_cat.SetQuantumStatistics(true);
+    scatt_cat.SetRedMass(m_red);
+
+    CATSparameters potential_p(CATSparameters::tPotential, 2, true);
+    potential_p.SetParameter(0, a_gauss);
+    potential_p.SetParameter(1, b_gauss);
+    scatt_cat.SetNumChannels(2);
+    scatt_cat.SetNumPW(0, 1);
+    scatt_cat.SetShortRangePotential(0, 0, gauss_potential, potential_p);
+    scatt_cat.SetSpin(0, 0);
+    scatt_cat.SetSpin(1, 1);
+    scatt_cat.SetChannelWeight(0, 0.25);
+    scatt_cat.SetChannelWeight(1, 0.75);
+
+    scatt_cat.KillTheCat();
+    
+    TH1F *cot_phase_shifts_h = new TH1F("cot_phase_shifts_h", "cot_phase_shifts_h", nbins_fd, k_min, k_max);
+    for(int i=0; i<nbins_fd; i++){
+        double phase_i = scatt_cat.GetPhaseShift(i, 0, 0);
+        double c_phase_i = 1 / tan(phase_i);
+        cot_phase_shifts_h->SetBinContent(i+1, c_phase_i);
+        cot_phase_shifts_h->SetBinError(i+1, 0.01);
+    }
+
+    TF1 *cot_fit = new TF1("cot_fit", "[0]/x + 0.5 * [1] * x", k_min, k_max);
+    cot_phase_shifts_h->Fit(cot_fit);
+    double f_2B = cot_fit->GetParameter(0);
+    double d_2B = cot_fit->GetParameter(1);
+
+    double f_calc = hbarc / f_2B;
+    double d_calc = d_2B * hbarc;
+
+    TH1F *scatt_par_h = new TH1F("th_histo_2", "th_histo_2", 2, 0, 50);
+    scatt_par_h->SetBinContent(1, f_calc);
+    scatt_par_h->SetBinContent(2, d_calc);
+    scatt_par_h->SetBinError(1, 0.01);
+    scatt_par_h->SetBinError(2, 0.01);
+
+    TH1F *phase_shifts_fd_h = new TH1F("phase_shifts_fd_h", "phase_shifts_fd_h", nbins_ps, k_min, k_max);
+    for(int i=0; i<nbins_ps; i++){
+        double k_star = phase_shifts_fd_h->GetBinCenter(i+1);
+        double f_ = f_calc / hbarc;
+        double d_ = d_calc / hbarc;
+        double mm_val_i = 1/f_ + 0.5*d_*pow(k_star,2);
+        double m_val_i = k_star / mm_val_i;
+        double ps_i = atan(m_val_i);
+        phase_shifts_fd_h->SetBinContent(i+1, ps_i);
+    }
+
+    CATS phase_cat;
+    phase_cat.SetMomBins(nbins_ps, k_min, k_max);
+    phase_cat.SetThetaDependentSource(false);
+
+//    CATSparameters source_p(CATSparameters::tSource, 1, true);
+    phase_cat.SetAnaSource(GaussSource, source_p);
+    phase_cat.SetAnaSource(0, source_size);
+    phase_cat.SetAutoNormSource(true);
+    phase_cat.SetUseAnalyticSource(true);
+    phase_cat.SetMomentumDependentSource(false);
+    phase_cat.SetExcludeFailedBins(false);
+    phase_cat.SetQ1Q2(0);
+    phase_cat.SetQuantumStatistics(true);
+    phase_cat.SetRedMass(m_red);
+
+//    CATSparameters potential_pp(CATSparameters::tPotential, 2, true);
+//    potential_pp.SetParameter(0, a_gauss);
+//    potential_pp.SetParameter(1, b_gauss);
+    phase_cat.SetNumChannels(2);
+    phase_cat.SetNumPW(0, 1);
+    phase_cat.SetShortRangePotential(0, 0, gauss_potential, potential_p);
+    phase_cat.SetSpin(0, 0);
+    phase_cat.SetSpin(1, 1);
+    phase_cat.SetChannelWeight(0, 0.25);
+    phase_cat.SetChannelWeight(1, 0.75);
+
+    phase_cat.KillTheCat();
+
+    TH1F *phase_shifts_h = new TH1F("th_histo_1", "th_histo_1", nbins_ps, k_min, k_max);
+    for(int i=0; i<nbins_ps; i++){
+        double phase_i = phase_cat.GetPhaseShift(i, 0, 0);
+        phase_shifts_h->SetBinContent(i+1, phase_i);
+        phase_shifts_h->SetBinError(i+1, 0.01);
+    }
+
+
+    TFile *th_model_cpu_scattering_parameters = new TFile(TString::Format("th_model_cpu%i_scattering_parameters_th_histo_2.root", cpu), "RECREATE");
+    th_model_cpu_scattering_parameters->cd();
+    scatt_par_h->Write();
+    phase_shifts_fd_h->Write();
+
+    delete scatt_par_h;
+    delete phase_shifts_fd_h;
+    th_model_cpu_scattering_parameters->Close();
+
+    TFile *th_model_cpu_phase_shifts = new TFile(TString::Format("th_model_cpu%i_phase_shifts_th_histo_1.root", cpu), "RECREATE");
+    th_model_cpu_phase_shifts->cd();
+    phase_shifts_h->Write();
+
+    delete phase_shifts_h;
+    th_model_cpu_phase_shifts->Close();
+
+    return 0;
+}
+
+
+int fit_only_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source_size, int cpu){
     nbins_ps = 10;
     double m1 = 938.272;
     double m2 = 938.272;
@@ -246,7 +371,7 @@ int fit_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source
     double f_calc = hbarc / f_2B;
     double d_calc = d_2B * hbarc;
 
-    TH1F *scatt_par_h = new TH1F("th_histo_2", "th_histo_2", 2, 0, 50);
+    TH1F *scatt_par_h = new TH1F("th_histo_1", "th_histo_1", 2, 0, 50);
     scatt_par_h->SetBinContent(1, f_calc);
     scatt_par_h->SetBinContent(2, d_calc);
 
@@ -262,7 +387,7 @@ int fit_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source
     }
 
 
-    TFile *th_model_cpu_scattering_parameters = new TFile(TString::Format("th_model_cpu%i_scattering_parameters_th_histo_2.root", cpu), "RECREATE");
+    TFile *th_model_cpu_scattering_parameters = new TFile(TString::Format("th_model_cpu%i_scattering_parameters_th_histo_1.root", cpu), "RECREATE");
     th_model_cpu_scattering_parameters->cd();
     scatt_par_h->Write();
     phase_shifts_h->Write();
@@ -274,24 +399,24 @@ int fit_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source
 }
 
 
-
 int OPTUNA_TRY001(int argc, char *argv[]){
     printf("%s\n", "Start:");
     string parameters_str = argv[1];
     vector<double> parameters = string_to_vector_double(parameters_str);
-    double f = parameters[1];
-    double a_gauss = parameters[3];
-    double d = parameters[2];
-    double b_gauss = parameters[4];
+//    double f = parameters[1];
+    double a_gauss = parameters[0];
+//    double d = parameters[2];
+    double b_gauss = parameters[1];
     int cpu = stoi(argv[2]);
     string nbins_str = argv[3];
     vector<int> nbins = string_to_vector_int(nbins_str);
     int nbins_ps = nbins[0];
     int nbins_fd = nbins[1];
     double source_size = 1.25; // must take later from config file
-    model_phase_shifts(f, d, cpu, nbins_ps);
+//    model_phase_shifts(f, d, cpu, nbins_ps);
 //    model_phase_shifts_gauss(nbins_ps, a_gauss, b_gauss, source_size, cpu);
-    fit_f_d_from_a_b(nbins_fd, a_gauss, b_gauss, source_size, cpu);
+//    fit_f_d_from_a_b(nbins_ps, nbins_fd, a_gauss, b_gauss, source_size, cpu);
+    fit_only_f_d_from_a_b(nbins_fd, a_gauss, b_gauss, source_size, cpu);
     printf("%s\n", "End.");
     return 0;
 }

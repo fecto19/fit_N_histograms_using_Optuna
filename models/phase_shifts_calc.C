@@ -106,7 +106,7 @@ vector<int> string_to_vector_int(const string& par_string){
 }
 
 
-/*
+
 int model_phase_shifts(const double f, const double d, const int cpu, const int nbins_ps){
     printf("%s\n", "creating TFile...");
     TFile *th_model_cpu_phase_shifts = new TFile(TString::Format("th_model_cpu%i_phase_shifts_th_histo_1.root", cpu), "RECREATE");
@@ -133,7 +133,7 @@ int model_phase_shifts(const double f, const double d, const int cpu, const int 
     printf("%s\n", "TFile closed :)");
     return 0;
 }
-*/
+
 
 
 /*
@@ -246,7 +246,7 @@ int fit_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source
     double f_calc = hbarc / f_2B;
     double d_calc = d_2B * hbarc;
 
-    TH1F *scatt_par_h = new TH1F("th_histo_1", "th_histo_1", 2, 0, 50);
+    TH1F *scatt_par_h = new TH1F("th_histo_2", "th_histo_2", 2, 0, 50);
     scatt_par_h->SetBinContent(1, f_calc);
     scatt_par_h->SetBinContent(2, d_calc);
 
@@ -262,7 +262,7 @@ int fit_f_d_from_a_b(int nbins_ps, double a_gauss, double b_gauss, double source
     }
 
 
-    TFile *th_model_cpu_scattering_parameters = new TFile(TString::Format("th_model_cpu%i_scattering_parameters_th_histo_1.root", cpu), "RECREATE");
+    TFile *th_model_cpu_scattering_parameters = new TFile(TString::Format("th_model_cpu%i_scattering_parameters_th_histo_2.root", cpu), "RECREATE");
     th_model_cpu_scattering_parameters->cd();
     scatt_par_h->Write();
     phase_shifts_h->Write();
@@ -279,18 +279,19 @@ int OPTUNA_TRY001(int argc, char *argv[]){
     printf("%s\n", "Start:");
     string parameters_str = argv[1];
     vector<double> parameters = string_to_vector_double(parameters_str);
-//    double f = parameters[0];
-    double a_gauss = parameters[0];
-//    double d = parameters[1];
-    double b_gauss = parameters[1];
+    double f = parameters[1];
+    double a_gauss = parameters[3];
+    double d = parameters[2];
+    double b_gauss = parameters[4];
     int cpu = stoi(argv[2]);
     string nbins_str = argv[3];
     vector<int> nbins = string_to_vector_int(nbins_str);
     int nbins_ps = nbins[0];
+    int nbins_fd = nbins[1];
     double source_size = 1.25; // must take later from config file
-//    model_phase_shifts(f, d, cpu, nbins_ps);
+    model_phase_shifts(f, d, cpu, nbins_ps);
 //    model_phase_shifts_gauss(nbins_ps, a_gauss, b_gauss, source_size, cpu);
-    fit_f_d_from_a_b(nbins_ps, a_gauss, b_gauss, source_size, cpu);
+    fit_f_d_from_a_b(nbins_fd, a_gauss, b_gauss, source_size, cpu);
     printf("%s\n", "End.");
     return 0;
 }

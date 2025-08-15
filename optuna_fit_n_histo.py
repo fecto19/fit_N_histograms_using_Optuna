@@ -41,6 +41,7 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
     cpu_str = f"{cpu}"
     nbins_str = f"{nbins}"
     command = [executable_path, param_string, cpu_str, nbins_str]
+#    print("command:\n", command)
     print(f"process cpu {cpu} starting execution of model...")
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
@@ -54,7 +55,7 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
         print(f"killed process cpu {cpu}")
         stdout, stderr = process.communicate()
 
-
+#    print("stdout, stderr:\n", stdout, "\n", stderr)
     th_histos_names = []
     for i in range(len(list(exp_data.values()))):
         name_i = f"th_histo_{i+1}"
@@ -81,17 +82,27 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
                 ordered_paths.append(paths[i])
     primary_th_dict = dict(zip(th_histos_names, ordered_paths))
     th_histos_dict = get_histos_from_dict(primary_th_dict, all_histos_th_created_bool)
-    histos_t = list(th_histos_dict.values())
-    histos_exp = list(exp_data.values())
+#    histos_t = list(th_histos_dict.values())
+#    histos_exp = list(exp_data.values())
+    histos_exp = [exp_data[k] for k in sorted(exp_data)]
+    histos_t   = [th_histos_dict[k] for k in sorted(th_histos_dict)]
+
     # take root files and calculate new chi^2
     primary_th_dict = dict(zip(th_histos_names, ordered_paths))
     chi_sqrs = []
+
+#    print("exp_data:\n", exp_data)
+#    print("th_histos_dict:\n", th_histos_dict)
+#    print("histos_exp:\n", histos_exp)
+#    print("histos_t:\n", histos_t)
     for i in range(len(histos_exp)):
         if histos_t[i] == "no_histo_created":
             print("th histo not made! Setting chi^2 to large value...\n")
             chi_sqrs.append(pow(10, 10))
         else:
             try:
+               # print(f"histos_t[{i}]:", histos_t[i])
+               # print(f"histos_exp[{i}]:", histos_exp[i])
                 chi_sqr_i = find_chi_sqr(histos_t[i], histos_exp[i])
                 chi_sqr_i = chi_sqr_i / nbins[i]
                 chi_sqrs.append(chi_sqr_i)
@@ -144,12 +155,14 @@ def get_histos_from_dict(histos_dict, all_histos_created_bool):
             histos[name] = histo_i
         else:
             histos[name] = "no_histo_created"
-        return histos
+        
+    return histos
 
 def find_chi_sqr(th_histo, exp_histo):
     nbins = th_histo.GetNbinsX()
     nbins_exp = exp_histo.GetNbinsX()
 #    print("nbins:", nbins)
+#    print("nbins_exp:", nbins_exp)
     if nbins_exp != nbins:
         sys.stderr.write(f"{th_histo} and {exp_histo} have different number of bins! Exiting program...\n")
         sys.exit(1)
@@ -262,7 +275,7 @@ def main(path_to_config_file):
         file_i.Close()
 #        print("th name_i", name_i)
  #       print("path_i", path_i)
-        name_i = f"teoretical_histo_{i}"
+        name_i = f"th_histo_{i+1}"
         th_histo[name_i] = histo_i
     th_histo_names_list = list(th_histo.keys())
     print("th histo", th_histo)
@@ -278,7 +291,7 @@ def main(path_to_config_file):
         histo_i = file_i.Get(name_i).Clone()
         histo_i.SetDirectory(0)
         file_i.Close()
-        name_i = f"experimental_histo_{i}"
+        name_i = f"exp_histo_{i+1}"
         exp_histo[name_i] = histo_i
     exp_histo_names_list = list(exp_histo.keys())
 
@@ -450,9 +463,11 @@ def main(path_to_config_file):
                 old_path = f"{dir_storage_path}/{filename}"
                 if filename.startswith(f"th_model_cpu{best_cpu}") and change_best_trial_root_file:
                     print(f"RENAMING cpu {best_cpu} file...\n")
-                    filename = "best_trial.root"
-                    new_path = f"{dir_storage_path}/{filename}"
-                    os.rename(old_path, new_path)
+                    for th_name in th_histo_names_list:
+                        if th_name in filename:
+                            filename = f"best_trial_{th_name}.root"
+                            new_path = f"{dir_storage_path}/{filename}"
+                            os.rename(old_path, new_path)
                 if filename.startswith(f"th_model_cpu{cpu}"):
                     print(f"deleting {filename}")
                     os.remove(old_path)

@@ -1,19 +1,19 @@
-histo_th_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/try_stuff/optuna_try/empty_histo_file.root	empty_histo 1
-histo_exp_1  /home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/try_stuff/optuna_try/line_exp_histo.root	exp_histo_1 1
-histo_th_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/try_stuff/optuna_try/empty_histo_file.root	empty_histo 1
-histo_exp_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/try_stuff/optuna_try/parabole_exp_histo.root	exp_histo_2 1
+histo_th_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/empty_histo_file.root	empty_histo 1
+histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/line_exp_histo.root	exp_histo_1 1
+histo_th_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/empty_histo_file.root	empty_histo 1
+histo_exp_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/parabole_exp_histo.root	exp_histo_2 1
 M1	938.272
 M2	938.272
 kMin	0
 kMax	90
 kBin	45
-par1	0.0	30.0
-par2	-300.0	-50.0
-par3	0.0	15.0
-par4	-80.0	0.0
-par5	-100.0	0.0
+par1	11.0	13.0
+par2	-160.0	-154.0
+par3	4.5	5.5
+par4	-35.0	-10.0
+par5	-60.0	-40.0
 pw	s
 pot 	DoubleGauss
 WakeUp  1
-TIMEOUT 6
+TIMEOUT 20
 CPU 4

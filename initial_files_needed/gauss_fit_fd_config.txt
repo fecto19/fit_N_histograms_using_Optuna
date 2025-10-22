@@ -1,5 +1,5 @@
 histo_th_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/2_bin_empty_histo_file.root	empty_histo 1
-histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/scatt_param_AV18.root	scatt_param_AV18_h 1
+histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/calculated_scatt_param_AV18.root	scatt_param_AV18_h 1
 M1	938.272
 M2	938.272
 kMin	0

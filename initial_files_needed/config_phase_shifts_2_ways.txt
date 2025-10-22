@@ -1,7 +1,7 @@
 histo_th_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/th_histo_1_Double_Gauss_to_AV18_histo_1.25.root	double_gauss_phase_shifts_h 1
 histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/AV18_histo_no_Coloumb1.25.root	phase_shifts_AV18_no_coloumb_h 1
 histo_th_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/2_bin_empty_histo_file.root	empty_histo 1
-histo_exp_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/scatt_param_AV18.root	scatt_param_AV18_h 1
+histo_exp_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/calculated_scatt_param_AV18.root	scatt_param_AV18_h 1
 M1	938.272
 M2	938.272
 kMin	0

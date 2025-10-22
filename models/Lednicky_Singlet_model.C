@@ -5,6 +5,7 @@
 #include "CATStools.h"
 #include "CATSconstants.h"
 #include "CommonAnaFunctions.h"
+#include "DLM_CkModels.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -17,10 +18,12 @@
 #include <cstdio>
 #include <complex>
 #include <fstream>
+#include <random>
 
 
 #include <unistd.h>
 #include "TH1F.h"
+#include "TH1D.h"
 #include "TFile.h"
 #include "TRandom3.h"
 #include "TF1.h"
@@ -28,6 +31,7 @@
 #include "TH2F.h"
 
 using namespace std;
+
 
 static string strip(string to_be_stripped){
     bool skip_str = false;
@@ -93,100 +97,56 @@ static vector<int> string_to_vector_int(const string& par_string){
     return parameters;
 }
 
-static int line(double a, double b, int cpu, int nbins, double k_min, double k_max){
-//    double k_min = -2.0;
-//    double k_max = 3.0;
-    TH1F *line_histo = new TH1F("th_histo_1", "th_histo_1", nbins, k_min, k_max);
-    for(int i = 0; i<nbins; i++){
-        double value_i = a * line_histo->GetBinCenter(i+1) + b;
-        line_histo->SetBinContent(i+1, value_i);
-    }
 
-    TFile *line_file = new TFile(TString::Format("th_model_cpu%i_th_histo_1.root", cpu), "RECREATE");
-    
-    line_file->cd();
-    line_histo->Write();
-
-    line_file->Close();
-    delete line_histo;
-    return 0;
-}
-
-static int parabole(double star, double first, double zero, int nbins, int cpu, double k_min, double k_max){
-//    double k_min = -2.0;
-//    double k_max = 3.0;
-    TH1F *parabole_histo = new TH1F("th_histo_2", "th_histo_2", nbins, k_min, k_max);
-    for(int i = 0; i<nbins; i++){
-        double x_val = parabole_histo->GetBinCenter(i+1);
-        double value_i = star * pow(x_val, 2) + first * x_val + zero;
-        parabole_histo->SetBinContent(i+1, value_i);
-        }
-
-    TFile *parabole_file = new TFile(TString::Format("th_model_cpu%i_th_histo_2.root", cpu), "RECREATE");
-
-    parabole_file->cd();
-    parabole_histo->Write();
-
-    parabole_file->Close();
-    delete parabole_histo;
-
-    return 0;
-}
-
-static int exponent(double a, double m, int nbins, int cpu, double k_min, double k_max){
-//    double k_min = -2.0;
-//    double k_max = 3.0;
-    TH1F *exponent_histo = new TH1F("th_histo_3", "th_histo_3", nbins, k_min, k_max);
+int lednicky_exp(int nbins, double *source_size, double f, double d, double *range, int cpu){
+    double scattering_parameters[2] = {f, d};
+    TH1D *corr_func_h = new TH1D("th_histo_1", "th_histo_1)", nbins, range[0], range[1]);
     for(int i=0; i<nbins; i++){
-        double x_val = exponent_histo->GetBinCenter(i+1);
-        double y_val = a * exp(m * x_val);
-        exponent_histo->SetBinContent(i+1, y_val);
+        double k_i = corr_func_h->GetBinCenter(i+1);
+        double c_k = Lednicky_Singlet(k_i, source_size, scattering_parameters);
+        corr_func_h->SetBinContent(i+1, c_k);
+        double error_i = 0.01;
+        corr_func_h->SetBinError(i+1, error_i);
     }
-    TFile *exponent_file = new TFile(TString::Format("th_model_cpu%i_th_histo_3.root", cpu), "RECREATE");
 
-    exponent_file->cd();
-    exponent_histo->Write();
+    TFile *corr_func_lednicky_exp = new TFile(TString::Format("th_model_cpu%i_th_histo_1.root", cpu), "RECREATE");
+    corr_func_lednicky_exp->cd();
+    corr_func_h->Write();
 
-    exponent_file->Close();
-    delete exponent_histo;
+    corr_func_lednicky_exp->Close();
+    delete corr_func_h;
     
     return 0;
 }
 
 
-int OPTUNA_TEST_FUNCTIONS(int argc, char *argv[]){
-    printf("%s", "Starting simple model...");
+int Lednicky_Singlet_model_main(int argc, char *argv[]){
+    printf("%s", "Starting Lednicky Singlet model...\n");
     
     string param_string = strip(argv[1]);
     vector<double> parameters = string_to_vector_double(param_string);
-    double a = parameters[0];
-    double b = parameters[1];
-    double star = parameters[2];
-    double first = parameters[3];
-    double zero = parameters[4];
-    double a2 = parameters[5];
-    double m = parameters[6];
+    double s_size = parameters[0];
+    double f = parameters[1];
+    double d = parameters[2];
     
     int cpu = stoi(argv[2]);
 
     string nbins_str = argv[3];
     vector<int> nbins_list = string_to_vector_int(nbins_str);
-    int nbins_line = nbins_list[0];
-    int nbins_parabole = nbins_list[1];
-    int nbins_exponent = nbins_list[2];
+    int nbins = nbins_list[0];
 
     string k_ranges_str = argv[4];
     vector<double> k_ranges_list = string_to_vector_double(k_ranges_str);
-    double k_min_1 = k_ranges_list[0];
-    double k_max_1 = k_ranges_list[1];
-    double k_min_2 = k_ranges_list[2];
-    double k_max_2 = k_ranges_list[3];
-    double k_min_3 = k_ranges_list[4];
-    double k_max_3 = k_ranges_list[5];
+    double k_min = k_ranges_list[0];
+    double k_max = k_ranges_list[1];
 
-    line(a, b, cpu, nbins_line, k_min_1, k_max_1);
-    parabole(star, first, zero, nbins_parabole, cpu, k_min_2, k_max_2);
-    exponent(a2, m, nbins_exponent, cpu, k_min_3, k_max_3);  
+    double source_size[1] = {s_size};
 
+    double range[2] = {k_min, k_max};
+
+    printf("%s%f\n", "source size", source_size[0]);
+    printf("%s%f%f\n", "scattering_parameters", f, d);
+    
+    lednicky_exp(nbins, source_size, f, d, range, cpu);
     return 0;
 }

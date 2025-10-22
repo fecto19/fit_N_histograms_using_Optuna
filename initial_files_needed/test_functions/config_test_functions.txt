@@ -1,0 +1,18 @@
+histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/test_functions/line_exp_histo45bins.root	exp_histo_1 1
+histo_exp_2	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/test_functions/parabole_exp_histo_45_-1_2.root	exp_histo_2 1
+histo_exp_3	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/test_functions/exponent_exp_histo_45_-4_4.root	exp_histo_3 1
+M1	938.272
+M2	938.272
+k_range_1	-10	10
+k_range_2	-1	2
+k_range_3	-4	4
+kBin	45
+par1	3.5 4.5
+par2	26.0	28.0
+par3    -3.5    -2.5
+par4	5.5     7.5
+par5    -13.0   -10.0
+par6    0.4    0.7
+par7    -0.8   -0.6
+TIMEOUT 20
+CPU 4

@@ -1,0 +1,8 @@
+histo_exp_1	/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/fit_N_histograms_with_Optuna/initial_files_needed/Lednicky_Singlet/corr_func_Lednicky_with_noise_TH1D.root	exp_histo_1	1
+m_red	469.136
+k_range_1	0.0	200.0
+par1	1.5	1.5
+par2	15.5	20.00
+par3	1.79	3.0
+TIMEOUT	10
+CPU	4

@@ -13,6 +13,8 @@ import plotly
 import numpy as np
 import pandas as pd
 
+from initial_files_needed.AI_scatt_params_to_corr_func import apply_model
+
 # get path to folder of this script
 current_dir = os.path.dirname(__file__)
 
@@ -34,13 +36,14 @@ def target_function(parameter_ranges, trial):
     return 0
 
 # update theoretical histos, calculate new chi^2, update study
-def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
+def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue, k_ranges_list):
     # give parameters to model script
     path_temp_files = path
     executable_path = "/home/fecto19/Particle_Physics_FzF/Bachelor_Thesis/CATS/Cproject/bin/LocalFemto"
     cpu_str = f"{cpu}"
     nbins_str = f"{nbins}"
-    command = [executable_path, param_string, cpu_str, nbins_str]
+    k_ranges_str = f"{k_ranges_list}"
+    command = [executable_path, param_string, cpu_str, nbins_str, k_ranges_str]
 #    print("command:\n", command)
     print(f"process cpu {cpu} starting execution of model...")
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -55,7 +58,7 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
         print(f"killed process cpu {cpu}")
         stdout, stderr = process.communicate()
 
-#    print("stdout, stderr:\n", stdout, "\n", stderr)
+    print("stdout, stderr:\n", stdout, "\n", stderr)
     th_histos_names = []
     for i in range(len(list(exp_data.values()))):
         name_i = f"th_histo_{i+1}"
@@ -80,7 +83,9 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
         for i in range(len(paths)):
             if name in paths[i]:
                 ordered_paths.append(paths[i])
+#    print("ordered_paths:\n", ordered_paths)
     primary_th_dict = dict(zip(th_histos_names, ordered_paths))
+#    print("primary_th_dict:\n", primary_th_dict)
     th_histos_dict = get_histos_from_dict(primary_th_dict, all_histos_th_created_bool)
 #    histos_t = list(th_histos_dict.values())
 #    histos_exp = list(exp_data.values())
@@ -95,6 +100,7 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
 #    print("th_histos_dict:\n", th_histos_dict)
 #    print("histos_exp:\n", histos_exp)
 #    print("histos_t:\n", histos_t)
+#    print("primary th dict:\n", primary_th_dict)
     for i in range(len(histos_exp)):
         if histos_t[i] == "no_histo_created":
             print("th histo not made! Setting chi^2 to large value...\n")
@@ -104,7 +110,7 @@ def worker_new(cpu, exp_data, path, nbins, trial, param_string, result_queue):
                # print(f"histos_t[{i}]:", histos_t[i])
                # print(f"histos_exp[{i}]:", histos_exp[i])
                 chi_sqr_i = find_chi_sqr(histos_t[i], histos_exp[i])
-                chi_sqr_i = chi_sqr_i / nbins[i]
+               # chi_sqr_i = chi_sqr_i / nbins[i]
                 chi_sqrs.append(chi_sqr_i)
             except IndexError:
                 print("th histo not made! Setting chi^2 to large value...\n")
@@ -167,15 +173,21 @@ def find_chi_sqr(th_histo, exp_histo):
         sys.stderr.write(f"{th_histo} and {exp_histo} have different number of bins! Exiting program...\n")
         sys.exit(1)
     chi_sqr = 0
+    min_value = exp_histo.GetXaxis().GetXmin()
+    max_value = exp_histo.GetXaxis().GetXmax()
     for i in range(1, nbins+1):
 #        print("th_histo value:", th_histo.GetBinContent(i))
 #        print("exp_histo value:", exp_histo.GetBinContent(i))
+        center_i = exp_histo.GetBinCenter(i)
+        if center_i < min_value or center_i > max_value:
+            print("HERE'S A BIN OUTSIDE RANGE. SKIPPING...\n")
+            continue
         value = pow(th_histo.GetBinContent(i) - exp_histo.GetBinContent(i), 2)
 #        print("value", value)
         error_i = exp_histo.GetBinError(i)
-#        print(error_i)
+#        print("error_i:\n", error_i)
         chi_sqr += value / pow(error_i, 2)
-#        print(chi_sqr)
+#        print("chi_sqr:\n", chi_sqr)
     return chi_sqr
 
 # check if all chi < chi_target
@@ -214,19 +226,30 @@ def main(path_to_config_file):
                 sys.stderr.write("You did not enter a valid number for timeout!\n Using default.\n")
     print("timeout: ", timeout)
 # number of histograms to fit and number of parameters
-    histogram_names = []
     parameters = []
     th_histo_index = []
     exp_histo_index = []
+    k_min_dict = {}
+    k_max_dict = {}
     cpu_config = 4 # default cpu number :)
+    m_red = 100.0 # reduced mass of the system in MeV
 #    print(len(config_data[0]))
     for i in range(len(config_data[0])):
-        if str(config_data[0][i]).startswith("histo"):
-            histogram_names.append(config_data[3][i])
-            if config_data[0][i].startswith("histo_th"):
-                th_histo_index.append(i)
-            if config_data[0][i].startswith("histo_exp"):
-                exp_histo_index.append(i)
+        if config_data[0][i].startswith("histo_exp"):
+                exp_histo_index.append(i+1)
+                th_histo_index.append(i+1)
+        if config_data[0][i].startswith("k_range"):
+            try:
+                index = int(config_data.iloc[i, 0][-1])
+            except:
+                sys.stderr.write("Index for k_ranges_index is not integer!\nFix config file.\nExiting program...\n")
+                return(1)
+            try:
+                k_min_dict[index] = float(config_data[1][i])
+                k_max_dict[index] = float(config_data[2][i])
+            except:
+                sys.stderr.write("You did not enter valid k_min and/or k_max!\nFix this.\nExiting program...\n")
+                return(1)
         if str(config_data[0][i]).startswith("par"):
 #            print(config_data[0][i])
 #            print(i)
@@ -238,14 +261,23 @@ def main(path_to_config_file):
                 print("CPU not integer! Change it to integer in the config file.\n")
                 print("Exiting program...\n")
                 return(1)
-            
-#    print(parameters)
-    if len(th_histo_index) != len(exp_histo_index):
-        sys.stderr.write("Different number theoretical and experimental histograms! Exititng program...\n")
-        sys.exit(1)
+        if str(config_data[0][i]) == "m_red":
+            try:
+                m_red = float(config_data[1][i])
+            except ValueError:
+                print("Value for reduced mass is not a number!\nExtiting program...\n")
+                sys.exit(1)
+            except Error as e:
+                print(f"Error: {e}.\n Exiting program...\n")
+                sys.exit(1)
+
+    k_ranges_list = []
+    keys = list(sorted(k_min_dict.keys()))
+    for i in range(len(keys)):
+        k_ranges_list.append(k_min_dict[keys[i]])
+        k_ranges_list.append(k_max_dict[keys[i]])
 
     par_ranges_df = config_data.iloc[parameters[0]:parameters[-1]+1, 0:3]
-    n_data_h = len(histogram_names)
     n_params = len(parameters)
 #    print("n_data", n_data_h)
 #    print("n_params", n_params)
@@ -259,32 +291,13 @@ def main(path_to_config_file):
         tuple_i = (min_value, max_value)
         par_ranges.append(tuple_i)
 
-# get the theoretical histograms
-    th_histo = {} # name of histo - histo
-    for i in range(len(th_histo_index)):
-        name_i = config_data.iloc[th_histo_index[i], 2]
-        path_i = config_data.iloc[th_histo_index[i], 1]
-        file_i = ROOT.TFile.Open(path_i, "READ")
-        histo = file_i.Get(name_i).Clone()
-        if not histo:
-            print(f"[ERROR] Could not get histogram '{name_i}' from file '{path_i}'")
-            print(f"  - File valid? {file_i.IsZombie()}")
-            continue
-        histo_i = file_i.Get(name_i).Clone()
-        histo_i.SetDirectory(0)
-        file_i.Close()
-#        print("th name_i", name_i)
- #       print("path_i", path_i)
-        name_i = f"th_histo_{i+1}"
-        th_histo[name_i] = histo_i
-    th_histo_names_list = list(th_histo.keys())
-    print("th histo", th_histo)
     
 # get the experimental histograms
     exp_histo = {} # name of histo - histo
+    th_histo_names_list = []
     for i in range(len(exp_histo_index)):
-        name_i = config_data.iloc[exp_histo_index[i], 2]
-        path_i = config_data.iloc[exp_histo_index[i], 1]
+        name_i = config_data.iloc[exp_histo_index[i]-1, 2]
+        path_i = config_data.iloc[exp_histo_index[i]-1, 1]
         file_i = ROOT.TFile.Open(path_i, "READ")
 #        print("exp name_i", name_i)
 #        print("path_i", path_i)
@@ -292,8 +305,27 @@ def main(path_to_config_file):
         histo_i.SetDirectory(0)
         file_i.Close()
         name_i = f"exp_histo_{i+1}"
-        exp_histo[name_i] = histo_i
+        k_min_i = k_min_dict[exp_histo_index[i]]
+        k_max_i = k_max_dict[exp_histo_index[i]]
+        reduced_bins = histo_i.FindBin(k_max_i) - histo_i.FindBin(k_min_i)
+        histo_custom_range_i = ROOT.TH1F(str(name_i), str(name_i), int(reduced_bins), float(k_min_i), float(k_max_i))
+#        print(f"k_min_i = {k_min_i}, k_max_i = {k_max_i}\n")
+        nbin_min = histo_i.FindBin(k_min_i)
+        nbin_max = histo_i.FindBin(k_max_i)
+#        print(f"n_min = {nbin_min}, n_max = {nbin_max}\n")
+#        print(f"y_kmin = {histo_i.GetBinContent(nbin_min)}\n y_kmax = {histo_i.GetBinContent(nbin_max)}\n")
+
+        j = 0
+        for i in range(nbin_min, nbin_max):
+            value_i = histo_i.GetBinContent(i)
+#            print(f"bin {i}, value = {value_i}\n")
+            histo_custom_range_i.SetBinContent(j+1, value_i)
+            j = j + 1
+        exp_histo[name_i] = histo_custom_range_i
     exp_histo_names_list = list(exp_histo.keys())
+    for i in range(len(exp_histo_names_list)):
+        name_th_i = f"th_histo_{i+1}"
+        th_histo_names_list.append(name_th_i)
 
     print("exp histo", exp_histo)
 
@@ -304,11 +336,8 @@ def main(path_to_config_file):
 
     chi_sqr_list = []
     for i in range(len(th_histo_index)):
-        th_histo_i = th_histo[th_histo_names_list[i]]
-        exp_histo_i = exp_histo[exp_histo_names_list[i]]
-        chi_sqr_i = find_chi_sqr(th_histo_i, exp_histo_i)
-        print(chi_sqr_i)
-        chi_sqr_list.append(chi_sqr_i)
+        default_chi_sqr = pow(10, 10)
+        chi_sqr_list.append(default_chi_sqr)
     print("chi_sqr_list:\n", chi_sqr_list)
 
 
@@ -369,6 +398,14 @@ def main(path_to_config_file):
                 trial.set_user_attr("cpu", cpu)
                 target_function(par_ranges, trial)
                 current_parameters_str = str(list(trial.params.values()))
+                current_params_no_m_red = list(trial.params.values())
+                current_ss = float(current_params_no_m_red[0])
+                current_f = float(current_params_no_m_red[1])
+                current_d = float(current_params_no_m_red[2])
+                current_a, current_b = apply_model.pass_optuna_trial_guess(m_red, current_f, current_d)
+                current_params_list = [m_red, current_ss, float(current_a), float(current_b)]
+                current_parameters_str = str(current_params_list)
+                print("current_parameters_str:\n", current_parameters_str)
 #                process_trials[cpu] = trial
                 trial_param_str_list = [trial, current_parameters_str]
                 trial_param[cpu] = trial_param_str_list
@@ -381,7 +418,7 @@ def main(path_to_config_file):
                 print(f"starting process: cpu {cpu}")
                 trial = trial_param[cpu][0]
                 param_string = trial_param[cpu][1]
-                p = Process(target=worker_new, args=(cpu, exp_histo, dir_storage_path, nbins_list, trial, param_string, result_queue))
+                p = Process(target=worker_new, args=(cpu, exp_histo, dir_storage_path, nbins_list, trial, param_string, result_queue, k_ranges_list))
                 p.start()
                # print("appending process cpu {cpu} in processes...\n")
                 processes.append(p)
@@ -457,6 +494,12 @@ def main(path_to_config_file):
                 change_best_trial_root_file = True
                 
             print("current best chi^2: ", chi_2[best_index])
+            print("current best parameters:")
+            try:
+                for key, value in best_trial.params.items():
+                        print(f"  {key}: {value}")
+            except:
+                continue
             # get the cpu responsible for the best trial in order to delete all other files
             best_cpu = best_trial.user_attrs.get("cpu", None)  # Will be None if not set
             for filename in os.listdir(dir_storage_path):

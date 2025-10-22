@@ -415,8 +415,8 @@ int OPTUNA_TRY001(int argc, char *argv[]){
     double source_size = 1.25; // must take later from config file
 //    model_phase_shifts(f, d, cpu, nbins_ps);
 //    model_phase_shifts_gauss(nbins_ps, a_gauss, b_gauss, source_size, cpu);
-//    fit_f_d_from_a_b(nbins_ps, nbins_fd, a_gauss, b_gauss, source_size, cpu);
-    fit_only_f_d_from_a_b(nbins_fd, a_gauss, b_gauss, source_size, cpu);
+    fit_f_d_from_a_b(nbins_ps, nbins_fd, a_gauss, b_gauss, source_size, cpu);
+//    fit_only_f_d_from_a_b(nbins_fd, a_gauss, b_gauss, source_size, cpu);
     printf("%s\n", "End.");
     return 0;
 }
